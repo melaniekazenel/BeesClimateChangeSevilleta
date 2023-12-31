@@ -125,7 +125,7 @@ summary$diff_direction<-ifelse(summary$SPEI_diff>0,"higher","lower")
 summary2<- summary %>% group_by(month,station, diff_direction) %>% summarise(count=n())
 
 # Calculate proportion of estimates that were higher vs. lower
-summary2$year_count<-ifelse(summary2$station=="grassland",14,15)
+summary2$year_count<-ifelse(summary2$month==5,14,15)
 summary2$proportion<-summary2$count/summary2$year_count
 
 # Get a summary of the mininum and maximum Penman and Thornthwaite-estimated SPEI values for the spring and monsoon season in each ecosystem

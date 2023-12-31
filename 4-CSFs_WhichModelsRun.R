@@ -5,7 +5,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -54,7 +54,7 @@ dataset_wide$station_year<-paste(dataset_wide$station,dataset_wide$year,sep = "_
 dataset_wide<-dataset_wide[,c(1:3,343:344,4:342)]
 
 # Read in climate data
-climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
 
 # Add new weather station column
 climate$station_no_space <- gsub(" ", "", climate$station)
@@ -69,13 +69,13 @@ dataset_wide<-left_join(dataset_wide,climate[,c(3:6,9)],by="station_year")
 dataset_wide2<-dataset_wide[,c(1:5,345:348,6:344)]
 
 # Write data file
-# write.csv(dataset_wide2,"bee_wide_year_2002-2019_no2016or2017_maxabund_2023-08-29.csv",row.names = FALSE)
+# write.csv(dataset_wide2,"bee_wide_year_2002-2019_no2016or2017_maxabund_2023-12-01.csv",row.names = FALSE)
 
 # Square root transform bee counts prior to analysis
 dataset_wide2[,10:348] <- sqrt(dataset_wide2[,10:348])
 
 # Write data file
-# write.csv(dataset_wide2,"bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-08-29.csv",row.names = FALSE)
+# write.csv(dataset_wide2,"bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-12-01.csv",row.names = FALSE)
 
 # Create a separate data frame for each site
 creo<-subset(dataset_wide2,ecosystem=="C")
@@ -1067,5 +1067,5 @@ for (i in 1:length(speciesCodesB)) {
 beeCSF_output <- data.frame(beeCSF_output)
 
 # Write .csv file of output
-# write.csv(beeCSF_output, "CSFs_which_models_run_no2016or2017_2023-08-29.csv",row.names = FALSE)
+# write.csv(beeCSF_output, "CSFs_which_models_run_no2016or2017_2023-12-01.csv",row.names = FALSE)
 

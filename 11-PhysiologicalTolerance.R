@@ -4,7 +4,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -114,7 +114,7 @@ summary(summary$mean)
 ##### Format linear CSF parameter estimate data, and merge with physiological tolerance data #####
 
 # Read in model output from climate sensitivity functions
-CSFs <- read.csv("bee_CSFs_2023-08-29.csv")
+CSFs <- read.csv("bee_CSFs_2023-12-01.csv")
 
 ### Extract the linear parameter estimate from the best model for each population in cases where the linear model was best
 
@@ -397,7 +397,7 @@ fulldata<-left_join(means2, lin_param_summary, by=c("family","genus"))
 ##### Format quadratic CSF parameter estimate data, and merge with physiological tolerance data #####
 
 # Read in model output from climate sensitivity functions
-CSFs <- read.csv("bee_CSFs_2023-08-29.csv")
+CSFs <- read.csv("bee_CSFs_2023-12-01.csv")
 
 ### Create a data frame containing the quadratic parameter estimate from the best model for each population in cases where the linear model was best (quadratic parameter estimate = 0 in these cases)
 
@@ -780,6 +780,7 @@ sev_genus_tree_2<-keep.tip(sev_genus_tree,fulldata$genus)
 plot(sev_genus_tree_2)
 
 
+
 ##### Phylogenetic mixed effects models: magnitude of change in abundance over time as a function of physiological or body mass metrics #####
 
 # thermal tolerance (CTMax)
@@ -993,7 +994,6 @@ R2_lik(p1)
 p1 <- pglmm(mean_end_vpd_z ~ mean_mass_z + (1|genus__), data = fulldata, family = "gaussian", cov_ranef = list(genus = sev_genus_tree_2),REML = FALSE)
 p1
 R2_lik(p1)
-
 
 # des tol
 p1 <- pglmm(mean_duration_hr_z ~ mean_mass_z + (1|genus__), data = fulldata, family = "gaussian", cov_ranef = list(genus = sev_genus_tree_2),REML = FALSE)

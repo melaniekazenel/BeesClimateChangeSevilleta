@@ -5,7 +5,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -27,10 +27,10 @@ library(stringr)
 ##### Format data #####
 
 # Read in data frame of square-root transformed bee abundance data and SPEI data
-max_abund_wide2<-read.csv("bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-08-29.csv")
+max_abund_wide2<-read.csv("bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-12-01.csv")
 
 # Read in list of which CSF models ran
-which_ran<-read.csv("CSFs_which_models_run_no2016or2017_2023-08-29.csv")
+which_ran<-read.csv("CSFs_which_models_run_no2016or2017_2023-12-01.csv")
 which_ran<-which_ran[-1,] # remove blank row
 
 # Get summary of how many models ran (skip_to_next = FALSE) vs. did not (skip_to_next = TRUE) for each species x ecosystem combination
@@ -66,7 +66,7 @@ beeCSF_output<-matrix(nrow=1,ncol=182,byrow=TRUE,dimnames=list(c("row1"),c("code
 ##### Chihuahuan Desert Shrubland #####
 
 # Create a data frame of just the bee abundance matrix (descriptor variables removed)
-speciesMatrix <- creo[,9:229]
+speciesMatrix <- creo[,9:234]
 
 # Create a vector of species codes
 speciesCodes <- colnames(speciesMatrix)
@@ -363,7 +363,7 @@ m2_monsoon6mo_lag_power,	m3_monsoon6mo_lag_power,	m1_monsoon6mo_lag_AR1_power, m
 ##### Chihuahuan Desert Grassland #####
 
 # Create a data frame of just the bee abundance matrix (descriptor variables removed)
-speciesMatrix <- black[,9:224] 
+speciesMatrix <- black[,9:221] 
 
 # Create a vector of species codes
 speciesCodes <- colnames(speciesMatrix)
@@ -660,7 +660,7 @@ for (i in 1:length(speciesMatrix[1,])) {
 ##### Plains Grassland #####
 
 # Create a data frame of just the bee abundance matrix (descriptor variables removed)
-speciesMatrix <- blue[,9:232] 
+speciesMatrix <- blue[,9:234] 
 
 # Create a vector of species codes
 speciesCodes <- colnames(speciesMatrix)
@@ -956,15 +956,15 @@ for (i in 1:length(speciesMatrix[1,])) {
 beeCSF_output <- data.frame(beeCSF_output) # make matrix into data frame
 beeCSF_output2 <- beeCSF_output[-1,] # remove blank row
 
-#write.csv(beeCSF_output2, "CSF_power_analysis_results_2023-08-29.csv",row.names=FALSE)
+#write.csv(beeCSF_output2, "CSF_power_analysis_results_2023-12-01.csv",row.names=FALSE)
 
 
 
 ##### Summary of Power Analysis Results #####
 
 # read in CSF model results and power analysis results, and join the two
-CSFs <- read.csv("bee_CSFs_2023-08-29.csv")
-power<-read.csv("CSF_power_analysis_results_2023-08-29.csv")
+CSFs <- read.csv("bee_CSFs_2023-12-01.csv")
+power<-read.csv("CSF_power_analysis_results_2023-12-01.csv")
 CSFs<-left_join(CSFs,power,by=c("code","ecosystem"))
 
 # subset to just include bee populations for which aridity did not predict abundance (i.e., the null model was best)
@@ -1002,4 +1002,4 @@ levels(summary$ecosystem) <- c("Plains Grassland","Desert Shrubland","Desert Gra
 summary<-summary[,c(9:12,2,4:8,3)]
 
 # save as .csv file
-#write.csv(summary,"power_analysis_table_2023-08-29.csv",row.names=FALSE)
+#write.csv(summary,"power_analysis_table_2023-12-01.csv",row.names=FALSE)

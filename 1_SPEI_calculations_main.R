@@ -5,7 +5,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -15,6 +15,7 @@ library(dplyr)
 library(tidyr)
 library(zoo)
 
+setwd("/Users/mkazenel/Documents/Ph.D./Research/Bees_Climate/Bee_CSFs/Recent_Code/Data_Final_Code_2023-12")
 
 ##### Initial Calculations: Historic Climate Data #####
 
@@ -144,8 +145,9 @@ historic <- historic %>% arrange(station_or_scenario,year,month) # sort the data
 # Combine all data frames created above
 combined_cwb<-bind_rows(historic,b2.6,b4.5,b8.5,fp2.6,fp4.5,fp8.5)
 
-# Calculate 6-month SPEI for each month of each year in the historic and future data, using 2002-2020 data from the Blue Grama weather station as a reference period.
-SPEI_6mo <- spei(data=ts(combined_cwb$CWB,freq=12,start=c(2002,1)), scale=6, ref.start = c(2002,1), ref.end = c(2020,12)) 
+# Calculate 6-month SPEI for each month of each year in the historic and future data, using historic data from the Plains and Desert weather stations as a reference period.
+# 2041 is listed as the end of the reference period in the code because data are formatted such that 2041 in the time series corresponds to 2020 in the Desert ecosystem data.
+SPEI_6mo <- spei(data=ts(combined_cwb$CWB,freq=12,start=c(2002,1)), scale=6, ref.start = c(2002,1), ref.end = c(2041,12)) 
 
 # Add the calculated SPEI values to the data frame
 combined_cwb$SPEI_6mo<-SPEI_6mo$fitted
@@ -318,5 +320,5 @@ combined_data_subset <- bind_rows(fp2.6_spei_subset_wide,fp4.5_spei_subset_wide,
 
 
 # Write a .csv file
-# write.csv(combined_data_subset,"spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv",row.names=FALSE)
+# write.csv(combined_data_subset,"spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv",row.names=FALSE)
 

@@ -5,7 +5,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -24,10 +24,10 @@ library(piecewiseSEM)
 ##### Format data #####
 
 # Read in data frame of square-root transformed bee count data and SPEI data
-max_abund_wide2<-read.csv("bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-08-29.csv")
+max_abund_wide2<-read.csv("bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-12-01.csv")
 
 # Read in list of which CSF models ran
-which_ran<-read.csv("CSFs_which_models_run_no2016or2017_2023-08-29.csv")
+which_ran<-read.csv("CSFs_which_models_run_no2016or2017_2023-12-01.csv")
 which_ran<-which_ran[-1,] # remove blank row
 
 # Get summary of how many models ran (skip_to_next = FALSE) vs. did not (skip_to_next = TRUE) for each species x ecosystem combination
@@ -59,7 +59,7 @@ blue<-cbind(blue_env,blue_data)
 ##### Chihuahuan Desert Shrubland #####
 
 # Read in data frame of historic and projected future SPEI data
-climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
 
 # Create data frame just containing projected future data (2021-2100)
 climate_forecast<-subset(climate,source!="SEV-met" & station=="Five Points")
@@ -111,7 +111,7 @@ beeCSF_output<-matrix(nrow=1,ncol=9,byrow=TRUE,dimnames=list(c("row1"),c("code",
 ecosystem <-"C"
 
 # Create a data frame of just the species abundance matrix
-speciesMatrixC <- creo[,9:229] 
+speciesMatrixC <- creo[,9:234] 
 
 # Create vector of species codes
 speciesCodesC <- colnames(speciesMatrixC)
@@ -256,7 +256,7 @@ for (i in 1:length(speciesCodesC)) {
 ##### Chihuahuan Desert Grassland #####
 
 # Read in data frame of historic and projected future SPEI data
-climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
 
 # Create data frame just containing projected future data (2021-2100)
 climate_forecast<-subset(climate,source!="SEV-met" & station=="Five Points")
@@ -305,7 +305,7 @@ climate_forecast<-bind_rows(climate_forecast_g1,climate_forecast_g2,climate_fore
 ecosystem <-"G"
 
 # Create a data frame of just the species abundance matrix
-speciesMatrixG <- black[,9:224] 
+speciesMatrixG <- black[,9:221] 
 
 # Create vector of species codes
 speciesCodesG <- colnames(speciesMatrixG)
@@ -445,7 +445,7 @@ for (i in 1:length(speciesCodesG)) {
 ##### Plains Grassland #####
 
 # Read in data frame of historic and projected future SPEI data
-climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+climate <- read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
 
 # Create data frame just containing projected future data (2021-2100)
 climate_forecast<-subset(climate,source!="SEV-met" & station=="Blue Grama")
@@ -494,7 +494,7 @@ climate_forecast<-bind_rows(climate_forecast_b1,climate_forecast_b2,climate_fore
 ecosystem <-"B"
 
 # Create a data frame of just the species abundance matrix
-speciesMatrixB <- blue[,9:232] 
+speciesMatrixB <- blue[,9:234] 
 
 # Create vector of species codes
 speciesCodesB <- colnames(speciesMatrixB)
@@ -636,4 +636,4 @@ beeCSF_output <- data.frame(beeCSF_output)
 beeCSF_output2<-beeCSF_output[-1,] # remove empty row
 
 # Write .csv file of output
-# write.csv(beeCSF_output2,"predicted_abundances_CanESM2-2023-08-29.csv", row.names=FALSE)
+# write.csv(beeCSF_output2,"predicted_abundances_CanESM2-2023-12-01.csv", row.names=FALSE)

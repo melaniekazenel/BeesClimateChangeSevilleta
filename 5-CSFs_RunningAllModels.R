@@ -5,7 +5,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -23,10 +23,10 @@ library(piecewiseSEM)
 ##### Format data #####
 
 # Read in data frame of square-root transformed bee count data and SPEI data
-max_abund_wide2<-read.csv("bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-08-29.csv")
+max_abund_wide2<-read.csv("bee_wide_year_2002-2019_no2016or2017_sqrtmaxabund_2023-12-01.csv")
 
 # Read in list of which CSF models ran
-which_ran<-read.csv("CSFs_which_models_run_no2016or2017_2023-08-29.csv")
+which_ran<-read.csv("CSFs_which_models_run_no2016or2017_2023-12-01.csv")
 which_ran<-which_ran[-1,] # remove blank row
 
 # Get summary of how many models ran (skip_to_next = FALSE) vs. did not (skip_to_next = TRUE) for each species x ecosystem combination
@@ -608,7 +608,7 @@ creo_original <- creo
 creo_climate <- creo[,5:8] 
 
 # Create a data frame of just the bee abundance matrix (descriptor variables removed)
-speciesMatrix <- creo[,9:229]
+speciesMatrix <- creo[,9:234]
 
 # Create a vector of species codes
 speciesCodes <- colnames(speciesMatrix)
@@ -2228,7 +2228,7 @@ black_original <- black
 black_climate <- black[,5:8]
 
 # Create a data frame of just the bee abundance matrix (descriptor variables removed)
-speciesMatrix <- black[,9:224]
+speciesMatrix <- black[,9:221]
 
 # Create a vector of species codes
 speciesCodes <- colnames(speciesMatrix)
@@ -3849,7 +3849,7 @@ blue_original <- blue
 blue_climate <- blue[,5:8]
 
 # Create a data frame of just the bee abundance matrix (descriptor variables removed)
-speciesMatrix <- blue[,9:232]
+speciesMatrix <- blue[,9:234]
 
 # Create vector of species codes
 speciesCodes <- colnames(speciesMatrix)
@@ -5466,4 +5466,4 @@ for (i in 1:length(speciesMatrix[1,])) {
 beeCSF_output <- data.frame(beeCSF_output) # make matrix into data frame
 beeCSF_output2 <- beeCSF_output[-1,] # remove empty first row
 
-#write.csv(beeCSF_output2, "bee_CSFs_2023-08-29.csv",row.names=FALSE)
+#write.csv(beeCSF_output2, "bee_CSFs_2023-12-01.csv",row.names=FALSE)

@@ -4,7 +4,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -23,11 +23,14 @@ library(lme4)
 library(piecewiseSEM)
 library(viridis)
 library(SPEI)
+library(patchwork)
 
+
+setwd("/Users/mkazenel/Documents/Ph.D./Research/Bees_Climate/Bee_CSFs/Recent_Code/Data Associated with Final Code")
 
 
 ##### EXTENDED DATA FIG. 1 #####
-### 1a and 1b ###
+### 1a and 1b ######
 
 # Read in and format Socorro, NM SPEI data from Rudgers et al. 2018 (Ecology)
 spei<-read.csv("socorro_1900_speiSept.csv") # SPEI 
@@ -64,10 +67,11 @@ p2
 #        dpi = 300)
 
 
-### 1c ###
+### 1c #####
 
 # Read in and format climate data (CanESM2 GCM)
-clim_new<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+clim_new<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
+
 names(clim_new)[2]<-"scenario"
 clim_new$scenario<-as.factor(clim_new$scenario)
 levels(clim_new$scenario)[levels(clim_new$scenario)=="SEV-met"] <- "historic"
@@ -89,13 +93,150 @@ clim_new_future<-subset(clim_new, scenario!="historic")
 clim_new_future$scenario<-as.factor(clim_new_future$scenario)
 levels(clim_new_future$scenario) <- c("RCP 2.6","RCP 4.5","RCP 8.5")
 
-p<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16))
+p1<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16)) + ggtitle("CanESM2") + theme(plot.title = element_text(size = 20)) + theme(strip.background = element_blank(),strip.text.x = element_blank()) + theme(axis.title.x=element_blank(), axis.text.x = element_blank())
+p1
+
+# Read in and format climate data (ACCESS 1.0 GCM)
+clim_new<-read.csv("spei_historic_and_future_byscenario_ACCESS1-0_2023-12-01.csv")
+
+names(clim_new)[2]<-"scenario"
+clim_new$scenario<-as.factor(clim_new$scenario)
+levels(clim_new$scenario)[levels(clim_new$scenario)=="SEV-met"] <- "historic"
+
+# Create data frames that assign the year 2020 to the projected future dataset, and bind these to the original climate dataset
+rcp2.6<-subset(clim_new,scenario=="historic" & year==2020)
+rcp2.6$scenario<-"rcp2.6"
+
+rcp4.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp4.5$scenario<-"rcp4.5"
+
+rcp8.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp8.5$scenario<-"rcp8.5"
+
+clim_new<-bind_rows(clim_new,rcp2.6,rcp4.5,rcp8.5)
+
+# Plot inverse monsoon SPEI as a function of year, for each climate scenario
+clim_new_future<-subset(clim_new, scenario!="historic")
+clim_new_future$scenario<-as.factor(clim_new_future$scenario)
+levels(clim_new_future$scenario) <- c("RCP 2.6","RCP 4.5","RCP 8.5")
+
+p2<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16)) + ggtitle("ACCESS 1.0") + theme(plot.title = element_text(size = 20)) + theme(axis.title.x=element_blank(), axis.text.x = element_blank()) + theme(strip.background = element_blank(),strip.text.x = element_blank())
+p2
+
+# Read in and format climate data (CCSM4 GCM)
+clim_new<-read.csv("spei_historic_and_future_byscenario_CCSM4_2023-12-01.csv")
+
+names(clim_new)[2]<-"scenario"
+clim_new$scenario<-as.factor(clim_new$scenario)
+levels(clim_new$scenario)[levels(clim_new$scenario)=="SEV-met"] <- "historic"
+
+# Create data frames that assign the year 2020 to the projected future dataset, and bind these to the original climate dataset
+rcp2.6<-subset(clim_new,scenario=="historic" & year==2020)
+rcp2.6$scenario<-"rcp2.6"
+
+rcp4.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp4.5$scenario<-"rcp4.5"
+
+rcp8.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp8.5$scenario<-"rcp8.5"
+
+clim_new<-bind_rows(clim_new,rcp2.6,rcp4.5,rcp8.5)
+
+# Plot inverse monsoon SPEI as a function of year, for each climate scenario
+clim_new_future<-subset(clim_new, scenario!="historic")
+clim_new_future$scenario<-as.factor(clim_new_future$scenario)
+levels(clim_new_future$scenario) <- c("RCP 2.6","RCP 4.5","RCP 8.5")
+
+p3<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16)) + ggtitle("CCSM 4.0") + theme(plot.title = element_text(size = 20)) + theme(axis.title.x=element_blank(), axis.text.x = element_blank()) + theme(strip.background = element_blank(),strip.text.x = element_blank())
+p3
+
+# Read in and format climate data (CNRM GCM)
+clim_new<-read.csv("spei_historic_and_future_byscenario_CNRM-CM5_2023-12-01.csv")
+
+names(clim_new)[2]<-"scenario"
+clim_new$scenario<-as.factor(clim_new$scenario)
+levels(clim_new$scenario)[levels(clim_new$scenario)=="SEV-met"] <- "historic"
+
+# Create data frames that assign the year 2020 to the projected future dataset, and bind these to the original climate dataset
+rcp2.6<-subset(clim_new,scenario=="historic" & year==2020)
+rcp2.6$scenario<-"rcp2.6"
+
+rcp4.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp4.5$scenario<-"rcp4.5"
+
+rcp8.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp8.5$scenario<-"rcp8.5"
+
+clim_new<-bind_rows(clim_new,rcp2.6,rcp4.5,rcp8.5)
+
+# Plot inverse monsoon SPEI as a function of year, for each climate scenario
+clim_new_future<-subset(clim_new, scenario!="historic")
+clim_new_future$scenario<-as.factor(clim_new_future$scenario)
+levels(clim_new_future$scenario) <- c("RCP 2.6","RCP 4.5","RCP 8.5")
+
+p4<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16)) + ggtitle("CNRM-CM5") + theme(plot.title = element_text(size = 20)) + theme(axis.title.x=element_blank(), axis.text.x = element_blank()) + theme(strip.background = element_blank(),strip.text.x = element_blank())
+p4
+
+# Read in and format climate data (CSIRO GCM)
+clim_new<-read.csv("spei_historic_and_future_byscenario_CSIRO-Mk3-6-0_2023-12-01.csv")
+
+names(clim_new)[2]<-"scenario"
+clim_new$scenario<-as.factor(clim_new$scenario)
+levels(clim_new$scenario)[levels(clim_new$scenario)=="SEV-met"] <- "historic"
+
+# Create data frames that assign the year 2020 to the projected future dataset, and bind these to the original climate dataset
+rcp2.6<-subset(clim_new,scenario=="historic" & year==2020)
+rcp2.6$scenario<-"rcp2.6"
+
+rcp4.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp4.5$scenario<-"rcp4.5"
+
+rcp8.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp8.5$scenario<-"rcp8.5"
+
+clim_new<-bind_rows(clim_new,rcp2.6,rcp4.5,rcp8.5)
+
+# Plot inverse monsoon SPEI as a function of year, for each climate scenario
+clim_new_future<-subset(clim_new, scenario!="historic")
+clim_new_future$scenario<-as.factor(clim_new_future$scenario)
+levels(clim_new_future$scenario) <- c("RCP 2.6","RCP 4.5","RCP 8.5")
+
+p5<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16)) + ggtitle("CSIRO-Mk3.6.0") + theme(plot.title = element_text(size = 20)) + theme(axis.title.x=element_blank(), axis.text.x = element_blank()) + theme(strip.background = element_blank(),strip.text.x = element_blank())
+p5
+
+# Read in and format climate data (INM GCM)
+clim_new<-read.csv("spei_historic_and_future_byscenario_INM-CM4_2023-12-01.csv")
+
+names(clim_new)[2]<-"scenario"
+clim_new$scenario<-as.factor(clim_new$scenario)
+levels(clim_new$scenario)[levels(clim_new$scenario)=="SEV-met"] <- "historic"
+
+# Create data frames that assign the year 2020 to the projected future dataset, and bind these to the original climate dataset
+rcp2.6<-subset(clim_new,scenario=="historic" & year==2020)
+rcp2.6$scenario<-"rcp2.6"
+
+rcp4.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp4.5$scenario<-"rcp4.5"
+
+rcp8.5<-subset(clim_new,scenario=="historic" & year==2020)
+rcp8.5$scenario<-"rcp8.5"
+
+clim_new<-bind_rows(clim_new,rcp2.6,rcp4.5,rcp8.5)
+
+# Plot inverse monsoon SPEI as a function of year, for each climate scenario
+clim_new_future<-subset(clim_new, scenario!="historic")
+clim_new_future$scenario<-as.factor(clim_new_future$scenario)
+levels(clim_new_future$scenario) <- c("RCP 2.6","RCP 4.5","RCP 8.5")
+
+p6<-ggplot(data=clim_new_future, aes(x=year,y=monsoon6SPEI*(-1))) + geom_point(size=3,color="black")+ ylab("Aridity index") + xlab("Year") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=15), legend.title=element_text(size=14))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="blue") + facet_wrap(~scenario) + theme(panel.spacing.x = unit(7, "mm")) + theme(strip.text.x = element_text(size = 16)) + ggtitle("INM") + theme(plot.title = element_text(size = 20)) + theme(strip.background = element_blank(),strip.text.x = element_blank())
+p6
+
+# Combine graphs into a multi-figure plot
+p<-p1 + p2 + p3 +p4 + p5 + p6 + plot_layout(ncol = 1, guides = "collect")
 p
 
 # save plot
-#ggsave("future_monsoon_spei_2023-08-29.jpg", p, width=8, height=5, units="in", dpi=300)
-
-
+#ggsave("future_monsoon_spei_2023-12-01.jpg", p, width=8, height=12, units="in", dpi=300)
 
 
 ##### EXTENDED DATA FIG. 2 #####
@@ -158,19 +299,22 @@ met_subset$season <- recode(met_subset$season, "5" = "spring", "9" = "monsoon")
 # Transform data from long to wide format
 met_subset_wide <- met_subset %>% pivot_wider(id_cols=c(year,station),names_from=season,values_from=c(airt_max6mo,precip_mean6mo))
 
-# Read in projected future climate data from CanESM2 GCM, for each of three climate scenarios
-rcp2.6<-read.csv("climatedata_CanESM2_RCP2.6_2020-12-22.csv")
-rcp4.5<-read.csv("climatedata_CanESM2_RCP4.5_2020-12-22.csv")
-rcp8.5<-read.csv("climatedata_CanESM2_RCP8.5_2020-12-22.csv")
+# Read in projected future climate data from ClimateNA for a given GCM (two files per GCM)
+rcp4.5<-read.csv("climatedata_ACCESS1-0_RCP45_2011-2100MP.csv")
+rcp8.5<-read.csv("climatedata_ACCESS1-0_RCP85_2011-2100MP.csv")
+# rcp4.5<-read.csv("climatedata_CCSM4_RCP45_2011-2100MP.csv")
+# rcp8.5<-read.csv("climatedata_CCSM4_RCP85_2011-2100MP.csv")
+# rcp4.5<-read.csv("climatedata_CNRM-CM5_RCP45_2011-2100MP.csv")
+# rcp8.5<-read.csv("climatedata_CNRM-CM5_RCP85_2011-2100MP.csv")
+# rcp4.5<-read.csv("climatedata_CSIRO-Mk3-6-0_RCP45_2011-2100MP.csv")
+# rcp8.5<-read.csv("climatedata_CSIRO-Mk3-6-0_RCP85_2011-2100MP.csv")
+# rcp4.5<-read.csv("climatedata_INM-CM4_RCP45_2011-2100MP.csv")
+# rcp8.5<-read.csv("climatedata_INM-CM4_RCP85_2011-2100MP.csv")
 
-# Add a scenario column to each data frame
-rcp2.6$scenario <- "rcp2.6"
+# Add a scenario column to each data frame, and combine the data frames
 rcp4.5$scenario <- "rcp4.5"
 rcp8.5$scenario <- "rcp8.5"
-
-# Combine the three data frames
-all_data<-bind_rows(rcp2.6,rcp4.5)
-all_data<-bind_rows(all_data,rcp8.5)
+all_data<-bind_rows(rcp4.5,rcp8.5)
 
 # Create new data frame containing only the columns of interest
 all_data_2 <- data_frame(Year=all_data$Year,all_data[,4:6],all_data[,7:18],all_data[,43:54],scenario=all_data$scenario)
@@ -200,28 +344,6 @@ temp_precip_long <- bind_rows(temp_long,precip_long)
 
 # Tranform the data from long to wide format
 temp_precip_wide <- temp_precip_long %>% pivot_wider(id_cols=c(Year,Latitude,Longitude,Elevation,month,scenario),names_from=variable,values_from=value)
-
-### For RCP 2.6: ###
-# Create data frame of just the RCP 2.6 data
-rcp2.6<-subset(temp_precip_wide,scenario=="rcp2.6")
-
-# Calculate rolling 6-month max temperature and mean precipitation
-rcp2.6$airt_max6mo<-rollmax(x=rcp2.6$Tmax,k=6,fill=NA,align="right")
-rcp2.6$precip_mean6mo<-rollmean(x=rcp2.6$PPT,k=6,fill=NA,align="right")
-
-# Subset the data to just include spring and monsoon values
-rcp2.6_subset<-subset(rcp2.6,month=="05"|month=="09")
-
-# Select the columns of interest
-rcp2.6_subset<-rcp2.6_subset[,c(1,5,6,9,10)]
-
-# Rename columns and recode values
-names(rcp2.6_subset)[c(1,2)]<-c("year","season")
-rcp2.6_subset$season<-as.factor(rcp2.6_subset$season)
-rcp2.6_subset$season <- recode(rcp2.6_subset$season, "05" = "spring", "09" = "monsoon")
-
-# Transform data from long to wide format
-rcp2.6_subset_wide <- rcp2.6_subset %>% pivot_wider(id_cols=c(year,scenario),names_from=season,values_from=c(airt_max6mo,precip_mean6mo))
 
 ### For RCP 4.5: ###
 # Create data frame of just the RCP 4.5 data
@@ -268,15 +390,19 @@ rcp8.5_subset$season <- recode(rcp8.5_subset$season, "05" = "spring", "09" = "mo
 rcp8.5_subset_wide <- rcp8.5_subset %>% pivot_wider(id_cols=c(year,scenario),names_from=season,values_from=c(airt_max6mo,precip_mean6mo))
 
 # Combine the data frames for each scenario, and subset to include just the years after 2020
-future<-bind_rows(rcp2.6_subset_wide,rcp4.5_subset_wide,rcp8.5_subset_wide)
+future<-bind_rows(rcp4.5_subset_wide,rcp8.5_subset_wide)
 future<-subset(future,year>2020)
 
 # Rename column and create new station column
 names(future)[2]<-"source"
 future$station<-"both"
 
-# Read in SPEI data
-spei<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+# Read in SPEI data for the focal GCM
+spei<-read.csv("spei_historic_and_future_byscenario_ACCESS1-0_2023-12-01.csv")
+#spei<-read.csv("spei_historic_and_future_byscenario_CCSM4_2023-12-01.csv")
+#spei<-read.csv("spei_historic_and_future_byscenario_CNRM-CM5_2023-12-01.csv")
+#spei<-read.csv("spei_historic_and_future_byscenario_CSIRO-Mk3-6-0_2023-12-01.csv")
+#spei<-read.csv("spei_historic_and_future_byscenario_INM-CM4_2023-12-01.csv")
 
 # Subset SPEI data to only include historic records, and join the historic temperature/precipitation and SPEI data frames
 spei_past<-subset(spei,year<=2020)
@@ -303,6 +429,30 @@ colnames(future2)
 # Combine the focal past and future data frames
 all<-bind_rows(past2,future2)
 
+# write .csv file of data
+#write.csv(all, "data_extdatafig4a_ACCESS1-0_2023-12-01.csv", row.names=FALSE)
+#write.csv(all, "data_extdatafig4a_CCSM4_2023-12-01.csv", row.names=FALSE)
+#write.csv(all, "data_extdatafig4a_CNRM-CM5_2023-12-01.csv", row.names=FALSE)
+#write.csv(all, "data_extdatafig4a_CSIRO-Mk3-6-0_2023-12-01.csv", row.names=FALSE)
+#write.csv(all, "data_extdatafig4a_INM_2023-12-01.csv", row.names=FALSE)
+
+# Read in data from each GCM, and add a column indicating the GCM to each data frame
+all1<-read.csv("data_extdatafig4a_CanESM2_2023-12-01.csv")
+all1$gcm<-"CanESM2"
+all2<-read.csv("data_extdatafig4a_ACCESS1-0_2023-12-01.csv")
+all2$gcm<-"ACCESS1-0"
+all3<-read.csv("data_extdatafig4a_CCSM4_2023-12-01.csv")
+all3$gcm<-"CCSM4"
+all4<-read.csv("data_extdatafig4a_CNRM-CM5_2023-12-01.csv")
+all4$gcm<-"CNRM"
+all5<-read.csv("data_extdatafig4a_CSIRO-Mk3-6-0_2023-12-01.csv")
+all5$gcm<-"CSIRO"
+all6<-read.csv("data_extdatafig4a_INM_2023-12-01.csv")
+all6$gcm<-"INM"
+
+# Combine data frames
+all<-bind_rows(all1,all2,all3,all4,all5,all6)
+
 # Create a new data frame and recode the source column in preparation for graphing
 forgraph<-all
 forgraph$source<-as.factor(forgraph$source)
@@ -326,23 +476,53 @@ g$layout$clip[g$layout$name=="panel"] <- "off"
 grid.draw(g)
 
 # Save the plot
-#ggsave("spei-by-max-air-temp_2023-08-29.jpg", g, width=5,height=4,units = c("in"), dpi = 300)
+#ggsave("spei-by-max-air-temp_2023-12-29.jpg", g, width=5,height=4,units = c("in"), dpi = 300)
 
 # Model the graphed relationship (linear regression)
 lm(monsoon6SPEI*(-1) ~ airt_max6mo_monsoon, data=all) 
-# equation of the line: spei = 0.2999*maxairtemp -10.8644
+# equation of the line: spei = 0.3979*maxairtemp -14.2091 
 
 # Use the equation above to calculate the SPEI value corresponding with the CTMax value of the least thermally tolerant bee taxon in the dataset
-0.2999*39.09 -10.8644 # output: 0.858691
+0.3979*39.09 -14.2091 # output: 1.344811
 
-# For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
-future2.6<-filter(all,source=="rcp2.6" & monsoon6SPEI*(-1)>=0.858691)
-nrow(future2.6)/80
-future4.5<-filter(all,source=="rcp4.5" & monsoon6SPEI*(-1)>=0.858691)
-nrow(future4.5)/80 # reported in manuscript
-future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=0.858691)
+# ACCESS 1.0 GCM: For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
+future4.5<-filter(all,source=="rcp4.5" & gcm=="ACCESS1-0" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future4.5)/80 # 0.2625
+future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=1.344811)
 nrow(future8.5)/80
 
+# CanESM2 GCM: For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
+future4.5<-filter(all,source=="rcp4.5" & gcm=="CanESM2" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future4.5)/80 # 0.2375
+future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future8.5)/80
+
+# CCSM4 GCM: For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
+future4.5<-filter(all,source=="rcp4.5" & gcm=="CCSM4" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future4.5)/80 # 0.1375
+future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future8.5)/80
+
+# CNRM GCM: For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
+future4.5<-filter(all,source=="rcp4.5" & gcm=="CNRM" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future4.5)/80 # 0.075
+future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future8.5)/80
+
+# CSIRO GCM: For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
+future4.5<-filter(all,source=="rcp4.5" & gcm=="CSIRO" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future4.5)/80 # 0.2375
+future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future8.5)/80
+
+# INM GCM: For each projected future climate scenario, calculate the percentage of future years for which monsoon conditions will exceed the thermal maximum of the least thermally tolerant bee taxon 
+future4.5<-filter(all,source=="rcp4.5" & gcm=="INM" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future4.5)/80 # 0.05
+future8.5<-filter(all,source=="rcp8.5" & monsoon6SPEI*(-1)>=1.344811)
+nrow(future8.5)/80
+
+# Calculate the mean percentage of future years across GCMs
+mean(c(0.2625,0.2375,0.1375,0.075,0.2375,0.05))
 
 ##### EXTENDED DATA FIG. 7 #####
 
@@ -424,7 +604,7 @@ summary(lm(ANPERCAL~year,data=summary2_wide))
 ##### EXTENDED DATA FIG. 8 #####
 
 # read in climate data, plant phenology data, and plant species list
-clim<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
+clim<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
 phen<-read.csv("sev137_plant_phenology.csv")
 plantlist<-read.csv("sev051_plantspecieslist_20140818.txt")
 
@@ -497,7 +677,7 @@ p<-ggplot(data=plotdata, aes(x=spring6SPEI*(-1),y=prop_flowering_spring)) + geom
 p
 
 # save plot
-# ggsave("plant_phenology_spring_spei_2023-08-29.jpg", p,
+# ggsave("plant_phenology_spring_spei_2023-12-01.jpg", p,
 #        width=7,height=3,units = c("in"),
 #        dpi = 300)
 
@@ -524,7 +704,7 @@ p<-ggplot(data=plotdata, aes(x=monsoon6SPEI*(-1),y=prop_flowering_monsoon)) + ge
 p
 
 # save graph
-# ggsave("plant_phenology_monsoon_spei_2023-08-29.jpg", p,
+# ggsave("plant_phenology_monsoon_spei_2023-12-01.jpg", p,
 #        width=7,height=3,units = c("in"),
 #        dpi = 300)
 

@@ -4,7 +4,7 @@
 # Heat and desiccation tolerances predict bee abundance under climate change
 # Melanie R. Kazenel, Karen W. Wright, Terry Griswold, Kenneth D. Whitney, and Jennifer A. Rudgers
 
-# Date: 2023-08-29
+# Date: 2023-12-01
 # Corresponding author's email: melanie.kazenel@gmail.com
 ################################################################################### 
 
@@ -37,13 +37,13 @@ library(visreg)
 library(cowplot)
 library(textshape)
 library(patchwork)
-
+library(ggbreak)
 
 
 ##### CLIMATE SENSITIVITY FUNCTIONS: SUMMARIZING RESULTS #####
 
 # Read in model output from climate sensitivity functions
-CSFs <- read.csv("bee_CSFs_2023-08-29.csv")
+CSFs <- read.csv("bee_CSFs_2023-12-01.csv")
 
 ### For how many bee populations did models run? ###
 length(CSFs$code)
@@ -397,7 +397,7 @@ p <- ggplot(aes(x=model_direction,y=total,fill=model_type), data=param_summary) 
 p
 
 # Save the graph
-#ggsave("CSFdirectionmagnitude.pdf", p ,width=5.5,height=3.25,units = c("in"),dpi = 600)
+#ggsave("CSFdirectionmagnitude_2023-12-01.pdf", p ,width=5.5,height=3.25,units = c("in"),dpi = 600)
 
 
 ### For what proportion of populations did present vs. prior year's aridity best predict abundance? ###
@@ -448,13 +448,32 @@ summary2$prop<-summary2$sum/summary2$eco_total
 
 
 
-##### PREDICTED FUTURE CHANGE IN INDIVIDUAL SPECIES ABUNDANCES: CANESM2 GCM #####
+##### PREDICTED FUTURE CHANGE IN INDIVIDUAL SPECIES ABUNDANCES #####
 ## Data manipulation #####
 
 ## Format predicted future bee abundance data ##
 
-# read in data
-abund<-read.csv("predicted_abundances_CanESM2-2023-08-29.csv")
+# read in data from each GCM, and add a column to each data frame indicating the GCM
+canesm<-read.csv("predicted_abundances_CanESM2-2023-12-01.csv")
+canesm$gcm<-"CanESM2"
+
+access<-read.csv("predicted_abundances_ACCESS1-0-2023-12-01.csv")
+access$gcm<-"ACCESS1-0"
+
+ccsm<-read.csv("predicted_abundances_CCSM4-2023-12-01.csv")
+ccsm$gcm<-"CCSM4"
+
+cnrm<-read.csv("predicted_abundances_CNRM-CM5-2023-12-01.csv")
+cnrm$gcm<-"CNRM"
+
+csiro<-read.csv("predicted_abundances_CSIRO-Mk3-6-0-2023-12-01.csv")
+csiro$gcm<-"CSIRO"
+
+inm<-read.csv("predicted_abundances_INM-CM4-2023-12-01.csv")
+inm$gcm<-"INM"
+
+# combine the data from the different GCMs
+abund <- bind_rows(canesm,access,ccsm,cnrm,csiro,inm)
 
 # remove NA and Inf values
 abund<-subset(abund,predicted_max_abundance_per_transect>-Inf & predicted_max_abundance_per_transect<Inf)
@@ -463,7 +482,15 @@ abund<-na.omit(abund)
 
 # remove outlier bee abundance values by excluding records that are more than five times the maximum number of bees of a single species recorded for a given transect x year combination 
 # max. number recorded = 822 individuals; 822*5 = 4110
-abund_updated<-subset(abund,predicted_max_abundance_per_transect<=4110)
+abund_subset<-subset(abund,predicted_max_abundance_per_transect<=4110)
+
+# calculate mean and se for abundance across GCMs for each bee species x ecosystem x transect x scenario x year combination
+abund_updated<-abund_subset %>% group_by(code,ecosystem,transect,scenario,year) %>% 
+  summarise(mean_predicted_max_abundance_per_transect=mean(predicted_max_abundance_per_transect),
+            se_predicted_max_abundance_per_transect=sd(predicted_max_abundance_per_transect)/sqrt(n()))
+
+# replace NA values with zeros in se column
+abund_updated$se_predicted_max_abundance_per_transect[is.na(abund_updated$se_predicted_max_abundance_per_transect)] <- 0
 
 # create list of species for which we have predicted future abundance data (i.e., species for which CSFs ran)
 species_future<-unique(abund_updated$code)
@@ -472,7 +499,7 @@ species_future<-unique(abund_updated$code)
 ## Format historic bee abundance data ##
 
 # read in data
-abund_hist_wide<-read.csv("bee_wide_year_2002-2019_no2016or2017_maxabund_2023-08-29.csv")
+abund_hist_wide<-read.csv("bee_wide_year_2002-2019_no2016or2017_maxabund_2023-12-01.csv")
 
 # add "scenario" column
 abund_hist_wide <- abund_hist_wide %>%  mutate(scenario="historic", .after = monsoon6SPEI_prioryear)
@@ -488,8 +515,9 @@ abund_historic_2_melt <- abund_historic_melt %>% filter(code %in% species_future
 
 # select columns and format data frames in preparation for combining them
 abund_historic_final<-abund_historic_2_melt[,c(2,3,10,1,11,12)]
-abund_future<-abund_updated[,c(2,3,5:6,1,4)]
-names(abund_future)[6]<-"abund"
+abund_historic_final$abund_se<-0
+abund_future<-abund_updated[,c(2:5,1,6,7)]
+names(abund_future)[6:7]<-c("abund","abund_se")
 
 # combine data frames
 abund_combined<-bind_rows(abund_future,abund_historic_final)
@@ -503,33 +531,8 @@ levels(abund_combined$station)[levels(abund_combined$station)=="B"] <- "Blue Gra
 levels(abund_combined$station)[levels(abund_combined$station)=="C"] <- "Five Points"
 levels(abund_combined$station)[levels(abund_combined$station)=="G"] <- "Five Points"
 
-
-## Add climate data ##
-
-# read in SPEI data
-clim_new<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-08-29.csv")
-
-# create data frame for historic data, and add climate data to it
-colnames(abund_combined)
-colnames(clim_new)
-historic<-subset(abund_combined,year<=2020)
-clim_historic<-subset(clim_new,source=="SEV-met")
-historic2<-left_join(historic,clim_historic,by=c("year","station"))
-historic2$source<-NULL
-
-# create data frame for future bee data, and add climate data to it
-future<-subset(abund_combined,year>2020)
-clim_future<-subset(clim_new,source!="SEV-met")
-names(clim_future)[2]<-"scenario"
-future2<-left_join(future,clim_future,by=c("year","scenario","station"))
-
-# combine the data frames
-colnames(historic2)
-colnames(future2)
-abund_combined_2<-bind_rows(historic2,future2)
-
-# sort the resulting data frame
-abund_combined_2<-abund_combined_2[order(abund_combined_2$code, abund_combined_2$ecosystem,abund_combined_2$transect,abund_combined_2$scenario,abund_combined_2$year),]
+# sort the data frame
+abund_combined_2<-abund_combined[order(abund_combined$code, abund_combined$ecosystem,abund_combined$transect,abund_combined$scenario,abund_combined$year),]
 
 
 ## Loop: Which species are predicted to increase, decrease, or remain stable in abundance over time? #####
@@ -586,14 +589,14 @@ specieslist<-read.csv("SEVBeeSpeciesList2002-2019_revised2023-07-19.csv")
 specieslist2<-left_join(specieslist[,1:5],year_output,by="code")
 
 # write .csv file of data frame
-# write.csv(specieslist2,"slopes_predicted_future_change_CanESM2_2023-08-29.csv",row.names = FALSE)
+# write.csv(specieslist2,"slopes_predicted_future_change_MeanAcrossGCMs_2023-12-01.csv",row.names = FALSE)
 
 
 
 ## Summary statistics: Which species predicted to increase, decrease, or remain stable in abundance over time? #####
 
 # Read in slope data (calculated above)
-slopes <- read.csv("slopes_predicted_future_change_CanESM2_2023-08-29.csv")
+slopes <- read.csv("slopes_predicted_future_change_MeanAcrossGCMs_2023-12-01.csv")
 
 # RCP 2.6
 # create separate data frames for species predicted to increase, decrease, or not change in abundance
@@ -619,7 +622,6 @@ names(df2)<-c("direction","count")
 df2$scenario<-"rcp4.5"
 df<-rbind(df,df2)
 
-
 # RCP 8.5
 # create separate data frames for species predicted to increase, decrease, or not change in abundance
 decrease_8 <- subset(slopes, scenario=="rcp8.5" & slope_year<0 & p_value<=0.05)
@@ -633,13 +635,13 @@ df2$scenario<-"rcp8.5"
 df<-rbind(df,df2)
 
 # Calculate proportion of species predicted to increase, decrease, or not change in each scenario
-df$proportion=as.numeric(df$count)/245
+df$proportion=as.numeric(df$count)/243
 
 # Format for table in manuscript
 df$count<-NULL
 df_wide<-pivot_wider(df,names_from="direction",values_from="proportion")
-df_wide<-df_wide %>% mutate(GCM="CanESM2", .before="scenario") 
-#write.csv(df_wide,"table_predicted_abundance_change_CanESM2.csv",row.names=FALSE)
+df_wide<-df_wide %>% mutate(GCM="Mean Across GCMs", .before="scenario") 
+#write.csv(df_wide,"table_predicted_abundance_change_MeanAcrossGCMs_2023-12-01.csv",row.names=FALSE)
 
 
 ## Map climate change winners vs. losers onto the bee phylogeny #####
@@ -745,7 +747,7 @@ plot(circ_spp_tree)
 # Add a heatmap to the tree indicating whether each species is predicted to increase, decrease, or not chnage in abundance over time
 
 # read in predicted future abundance change data
-slopes <- read.csv("slopes_predicted_future_change_CanESM2_2023-08-29.csv")
+slopes <- read.csv("slopes_predicted_future_change_MeanAcrossGCMs_2023-12-01.csv")
 
 # format the data for mapping onto the phylogeny
 decrease_4 <- subset(slopes, scenario=="rcp4.5" & slope_year<0 & p_value<=0.05)
@@ -770,7 +772,7 @@ circ_spp_tree_heatmap <-gheatmap(circ_spp_tree, slopes_for_tree_4.5, width=0.05,
 circ_spp_tree_heatmap
 
 # save the plot. 
-#save_plot("bee_phylogeny_winnerslosers_2023-08-29_withlegend.pdf", circ_spp_tree_heatmap, base_width = 13, base_height = 13)
+# save_plot("bee_phylogeny_winnerslosers_MeanAcrossGCMs_2023-12-01_withlegend.pdf", circ_spp_tree_heatmap, base_width = 13, base_height = 13)
 
 # plot the tree with species tip labels and colors indicating predicted change in abundance
 circ_spp_tree_heatmap2 <-gheatmap(circ_spp_tree2, slopes_for_tree_4.5, width=0.05, color = "black", colnames = FALSE) + 
@@ -785,7 +787,7 @@ circ_spp_tree_heatmap2$data$label[circ_spp_tree_heatmap2$data$label=="Lithurgus_
 circ_spp_tree_heatmap2
 
 # save the plot
-#save_plot("bee_phylogeny_winnerslosers_speciesnames_2023-08-29_withlegend.jpg", circ_spp_tree_heatmap2, base_width = 13, base_height = 13,dpi=600)
+# save_plot("bee_phylogeny_winnerslosers_MeanAcrossGCMs_speciesnames_2023-12-01_withlegend.jpg", circ_spp_tree_heatmap2, base_width = 13, base_height = 13,dpi=600)
 
 
 ## Do life history traits predict "winners" vs. "losers" under future climate change? #####
@@ -794,7 +796,7 @@ circ_spp_tree_heatmap2
 # life history trait data:
 lhtraits<-read.csv("lhtraits_2023-08-29_forpub.csv")
 # predicted future change in abundance data:
-predslopes<-read.csv("slopes_predicted_future_change_CanESM2_2023-08-29.csv")
+predslopes<-read.csv("slopes_predicted_future_change_MeanAcrossGCMs_2023-12-01.csv")
 
 # Subset predicted change in abundance data to just include points from the RCP 4.5 climate scenario, and create separate data frames for species predicted to increase, decrease, and not change in abundance over time, adding a column indicating direction of predicted change
 decrease_4 <- subset(predslopes, scenario=="rcp4.5" & slope_year<0 & p_value<=0.05)
@@ -834,15 +836,10 @@ unique(over$overwintering_stage)
 chisq.test(y=over$direction_num,x=over$overwintering_stage, simulate.p.value = TRUE)
 
 
-
-
-
-
-
 ## For what proportion of species might future increases in climate variability buffer against declines? #####
 
 # read in predicted future abundance change data
-slopes <- read.csv("slopes_predicted_future_change_CanESM2_2023-08-29.csv")
+slopes <- read.csv("slopes_predicted_future_change_MeanAcrossGCMs_2023-12-01.csv")
 
 # select data from RCP 4.5, and add a column indicating whether each species is predicted to increase, decrease, or not change in abundance over time
 decrease_4 <- subset(slopes, scenario=="rcp4.5" & slope_year<0 & p_value<=0.05)
@@ -854,7 +851,7 @@ no_change_4$direction_num<-"No change"
 slopes2<-rbind(decrease_4,increase_4,no_change_4)
 
 # read in climate sensitivity function results 
-CSFs <- read.csv("bee_CSFs_2023-08-29.csv")
+CSFs <- read.csv("bee_CSFs_2023-12-01.csv")
 
 # create new dataset for calculations
 CSFsquad <- CSFs
@@ -998,10 +995,81 @@ phyloSignal(p4d = p4d, method = "all")
 ## How will total bee abundance change over time? #####
 
 # calculate total abundance across bee species for each ecosystem x year combination in the historic and projected future data
-abund_summary <- abund_combined_2 %>% group_by(ecosystem,scenario,year,monsoon6SPEI) %>% summarise(total_abund=sum(abund))
+abund_summary <- abund_combined_2 %>% group_by(ecosystem,scenario,year) %>% summarise(total_abund=sum(abund))
 
 # remove very high outlier values
 abund_summary<-subset(abund_summary,total_abund<10000)
+
+
+# add climate data:
+
+# read in climate data from each GCM, and add a column indicating GCM identity
+clim_canesm<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
+clim_canesm$gcm<-"CanESM2"
+
+clim_access<-read.csv("spei_historic_and_future_byscenario_ACCESS1-0_2023-12-01.csv")
+clim_access$gcm<-"ACCESS1-0"
+
+clim_ccsm<-read.csv("spei_historic_and_future_byscenario_CCSM4_2023-12-01.csv")
+clim_ccsm$gcm<-"CCSM4"
+
+clim_cnrm<-read.csv("spei_historic_and_future_byscenario_CNRM-CM5_2023-12-01.csv")
+clim_cnrm$gcm<-"CNRM"
+
+clim_csiro<-read.csv("spei_historic_and_future_byscenario_CSIRO-Mk3-6-0_2023-12-01.csv")
+clim_csiro$gcm<-"CSIRO"
+
+clim_inm<-read.csv("spei_historic_and_future_byscenario_INM-CM4_2023-12-01.csv")
+clim_inm$gcm<-"INM"
+
+# bind climate data from the GCMs together
+clim_all<-bind_rows(clim_canesm,
+                    clim_access,
+                    clim_ccsm,
+                    clim_cnrm,
+                    clim_csiro,
+                    clim_inm)
+
+# calculate mean and se monsoon aridity across GCMs
+clim_avg <- clim_all %>% group_by(year,source,station) %>%
+  summarise(mean_monsoon6SPEI=mean(monsoon6SPEI),
+            se_monsoon6SPEI=sd(monsoon6SPEI)/sqrt(n()))
+
+# replace NA values with zeros in se column
+clim_avg$se_monsoon6SPEI[is.na(clim_avg$se_monsoon6SPEI)] <- 0
+
+# add station column
+abund_summary$station<-abund_summary$ecosystem
+
+# rename levels of the "station" variable
+abund_summary$station<-as.factor(abund_summary$station)
+levels(abund_summary$station)[levels(abund_summary$station)=="B"] <- "Blue Grama"
+levels(abund_summary$station)[levels(abund_summary$station)=="C"] <- "Five Points"
+levels(abund_summary$station)[levels(abund_summary$station)=="G"] <- "Five Points"
+
+# create data frame for historic data, and add climate data to it
+colnames(abund_summary)
+colnames(clim_avg)
+historic<-subset(abund_summary,year<=2020)
+clim_historic<-subset(clim_avg,source=="SEV-met")
+historic2<-left_join(historic,clim_historic,by=c("year","station"))
+historic2$source<-NULL
+
+# create data frame for future bee data, and add climate data to it
+future<-subset(abund_summary,year>2020)
+clim_future<-subset(clim_avg,source!="SEV-met")
+names(clim_future)[2]<-"scenario"
+future2<-left_join(future,clim_future,by=c("year","scenario","station"))
+
+# combine the data frames
+colnames(historic2)
+colnames(future2)
+abund_summary<-bind_rows(historic2,
+                           future2)
+
+# sort the resulting data frame
+abund_summary<-abund_summary[order(abund_summary$ecosystem,abund_summary$scenario,abund_summary$year),]
+
 
 # Plot predicted change in total abundance over time for RCP 4.5, with points colored by SPEI
 
@@ -1014,16 +1082,16 @@ levels(rcp4.5$scenario)<-c("long-term historic","predicted future")
 
 # plot the trend
 plot_abundchange<-ggplot(data=rcp4.5, aes(x=year,y=total_abund)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
+  geom_point(size=3,aes(fill=mean_monsoon6SPEI*(-1),shape=scenario))+ 
   scale_shape_manual(values=c(22,21)) +
   xlab("Year") + ylab("Total abundance") + 
   theme_classic() + theme(axis.text.x = element_text(size=16))+ theme(axis.text.y = element_text(size=16)) + theme(legend.text=element_text(size=13), legend.title=element_text(size=15))+
   theme(axis.title.x = element_text(size=20))+ theme(axis.title.y = element_text(size=20)) +
   geom_smooth(method="lm",color="black") + 
   scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type") +
-  annotate("text", x = 2011, y = 6000, label = expression(atop(italic(P)*" = 0.6324",italic(r^2)=="0.10")),size=4.5) +
-  theme(plot.margin = unit(c(0,0,0,20), "pt")) +
-  scale_y_continuous(breaks = c(0,1000,2000,3000,4000,5000,6000))
+  annotate("text", x = 2075, y = 3000, label = expression(atop(italic(P)*" = 0.1127",italic(R^2)=="0.14")),size=4.5) +
+  scale_y_continuous(breaks = c(0,500,1500,2500,3500)) +
+  theme(plot.margin = unit(c(0,0,0,20), "pt"))
 plot_abundchange
 
 
@@ -1047,17 +1115,19 @@ levels(rcp2_8$scenario2)<-c("RCP 2.6","RCP 8.5")
 
 # plot trends
 plot<-ggplot(data=rcp2_8, aes(x=year,y=total_abund)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
+  geom_point(size=3,aes(fill=mean_monsoon6SPEI*(-1),shape=scenario))+ 
   scale_shape_manual(values=c(22,21)) +
   xlab("Year") + ylab("Total abundance") + 
   theme_bw() + theme(axis.text.x = element_text(size=16))+ theme(axis.text.y = element_text(size=16)) + theme(legend.text=element_text(size=12), legend.title=element_text(size=15))+
   theme(axis.title.x = element_text(size=20))+ theme(axis.title.y = element_text(size=20)) +
   geom_smooth(method="lm",color="black") + 
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type") + ylim(0,10000) + facet_wrap(~scenario2) + theme(panel.spacing.x = unit(10, "mm")) + theme(strip.text.x = element_text(size = 18)) + theme(axis.line = element_line(color='black'), plot.background = element_blank(),panel.grid.minor = element_blank(),panel.grid.major = element_blank())
+  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type") + 
+  #ylim(0,10000) + 
+  facet_wrap(~scenario2) + theme(panel.spacing.x = unit(10, "mm")) + theme(strip.text.x = element_text(size = 18)) + theme(axis.line = element_line(color='black'), plot.background = element_blank(),panel.grid.minor = element_blank(),panel.grid.major = element_blank())
 plot
 
 # save plot
-# ggsave("change_total_abundance_rcp2.6_and_8.5_2023-08-29.jpg", plot,
+# ggsave("change_total_abundance_rcp2.6_and_8.5_2023-12-01.jpg", plot,
 #        width=12,height=6.25,units = c("in"),
 #        dpi = 300)
 
@@ -1086,10 +1156,10 @@ summary(lm(total_abund~year*ecosystem, data=rcp8.5))
 historic<-subset(abund_combined, scenario == "historic")
 rank_historic <- historic %>% group_by(code) %>% summarise(total_abund=sum(abund))
 rank_historic <- rank_historic[order(-rank_historic$total_abund),]
-rank_historic$abundance_rank_historic<-1:245
+rank_historic$abundance_rank_historic<-1:243
 
 # read in predicted abundance change data
-slopes <- read.csv("slopes_predicted_future_change_CanESM2_2023-08-29.csv")
+slopes <- read.csv("slopes_predicted_future_change_MeanAcrossGCMs_2023-12-01.csv")
 
 # subset change in abundance data to just include RCP 4.5, and join to historic rank abundance data frame
 slopes<-subset(slopes,scenario=="rcp4.5")
@@ -1101,6 +1171,9 @@ rank_historic$genus_species<-paste(rank_historic$genus, rank_historic$species, s
 # subset data for graph
 for_graph<-subset(rank_historic,abundance_rank_historic<=50) # just plotting abundance ranks of top 50 most abundant species
 
+# add column indicating indicating whether abundance change over time was significant
+for_graph$signif<-ifelse(for_graph$p_value<0.05,"significant","nonsignificant")
+
 # get a list of genera represented by the 50 most abundant species
 summary<-for_graph%>%group_by(genus)%>%summarise(count=n())
 
@@ -1109,16 +1182,16 @@ y_label<-expression(atop("Magnitude of change in","abundance ("*italic("\u03B2")
 
 # plot magnitude of change in abundance over time as a function of abundance rank
 plot_rank<-ggplot(data=for_graph, aes(x=abundance_rank_historic, y=slope_year, fill=genus)) +
-  geom_errorbar(aes(ymax = slope_year + se_year, ymin = slope_year - se_year))+
+  geom_errorbar(aes(ymax = slope_year + se_year, ymin = slope_year - se_year, color=signif))+
   geom_hline(yintercept=0, linetype="dashed", color = "darkgray") +
-  geom_point(size=3,shape=21) +
+  geom_point(size=3,shape=21,aes(color=signif)) +
   
   theme_classic() + theme(axis.text.x = element_text(size=16))+ theme(axis.text.y = element_text(size=16)) + theme(legend.text=element_text(size=12), legend.title=element_text(size=15))+
   theme(axis.title.x = element_text(size=20))+ theme(axis.title.y = element_text(size=20)) +
   
   xlab("Abundance rank") + ylab(y_label) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_color_manual("black") +
+  scale_color_manual(values=c("gray","black")) +
   scale_fill_manual(values=c("#A6CEE3",
                              "#1F78B4",
                              "#B2DF8A",
@@ -1140,8 +1213,10 @@ plot_rank<-ggplot(data=for_graph, aes(x=abundance_rank_historic, y=slope_year, f
                              "#80B1D3",
                              "#FFFF99")) +
   theme(legend.text = element_text(face="italic"))+
-  #theme(plot.margin = unit(c(0,0,0,30), "pt")) +
-  labs(fill="Genus")
+  labs(fill="Genus") +
+  guides(color = "none") +
+  scale_y_break(breaks = c(-0.035, -0.11), scale=5, space=0.15, ticklabels=c(-0.025,0,0.025,0.05)) +
+  scale_y_break(breaks = c(0.07, 0.09), scale=0.6, ticklabels=c(0.10, 0.12), space=0.15)
 plot_rank
 
 # combine graphs into a multi-figure plot
@@ -1150,12 +1225,36 @@ p1<- plot_rank + plot_abundchange + plot_layout(ncol = 2) + plot_annotation(tag_
 p1
 
 # save plot
-# ggsave("rank_abund_and_change_over_time_2023-08-29.pdf", p1,
+# ggsave("rank_abund_and_change_over_time_2023-12-01.pdf", p1,
 #        width=40,height=18,units = c("cm"),
 #        dpi = 600, device = cairo_pdf)
 
-##### CHANGE IN COMMUNITY-WEIGHTED MEAN BODY MASS WITH ARIDITY AND OVER TIME #####
+
+##### CHANGE IN COMMUNITY-WEIGHTED MEAN BODY MASS WITH ARIDITY IN HISTORIC DATASET #####
 ## Format data #####
+
+# select columns and format data frames in preparation for combining them
+abund_historic_final<-abund_historic_2_melt[,c(2,3,10,1,11,12)]
+
+# add station column
+abund_historic_final$station<-abund_historic_final$ecosystem
+
+# rename levels of the "station" variable
+abund_historic_final$station<-as.factor(abund_historic_final$station)
+levels(abund_historic_final$station)[levels(abund_historic_final$station)=="B"] <- "Blue Grama"
+levels(abund_historic_final$station)[levels(abund_historic_final$station)=="C"] <- "Five Points"
+levels(abund_historic_final$station)[levels(abund_historic_final$station)=="G"] <- "Five Points"
+
+## Add climate data ##
+
+# read in SPEI data
+clim_canesm<-read.csv("spei_historic_and_future_byscenario_CanESM2_2023-12-01.csv")
+
+# create data frame for historic data, and add climate data to it
+colnames(clim_canesm)
+clim_historic<-subset(clim_canesm,source=="SEV-met")
+historic2<-left_join(abund_historic_final,clim_historic,by=c("year","station"))
+historic2$source<-NULL
 
 # read in mass data for each bee species
 mass<-read.csv("SEVBeeBodyMassData_2023-08-29_forpub.csv")
@@ -1165,46 +1264,38 @@ avg_mass<-mass %>% group_by(code) %>% summarise(mean_mass_mg=mean(mass_mg),se_ma
 
 # Calculate community-weighted mean body mass:
 
-# merge historic and future bee abundance data with mass data
-abund_focal_merged <- left_join(abund_combined_2, avg_mass, by = c("code"))
+# merge historic bee abundance data with mass data
+abund_focal_merged <- left_join(historic2, avg_mass, by = c("code"))
 
 # remove rows with NAs (species for which we lack body mass data)
 abund_focal_merged<-subset(abund_focal_merged,!is.na(mean_mass_mg))
 
-# calculate total bee abundance for each ecosystem x transect x year x scenario combination
-summary <- abund_focal_merged %>% group_by(ecosystem, transect, year, scenario) %>% summarise(site_year_total_abund = sum(abund))
+# calculate total bee abundance for each ecosystem x transect x year combination
+summary <- abund_focal_merged %>% group_by(ecosystem, transect, year) %>% summarise(site_year_total_abund = sum(abund))
 
 # join the two data frames from above
-cwdata <- left_join(abund_focal_merged, summary, by = c("ecosystem","transect", "year","scenario"))
+cwdata <- left_join(abund_focal_merged, summary, by = c("ecosystem","transect", "year"))
 
 # add a column of mass-weighted abundance 
 cwdata$prop_abund <- cwdata$abund/cwdata$site_year_total_abund
 cwdata$cw_mass <- cwdata$prop_abund*cwdata$mean_mass_mg
 
 # calculate community-weighted mean (CWM) body mass
-cwdata_final <- cwdata %>% group_by(ecosystem, transect, year, scenario) %>% summarise(cwm_mass = sum(cw_mass, na.rm = TRUE))
+cwdata_final <- cwdata %>% group_by(ecosystem, transect, year, monsoon6SPEI) %>% summarise(cwm_mass = sum(cw_mass, na.rm = TRUE))
 
-# Add climate data of interest:
-# get climate data
-climate<-abund_combined_2 %>% group_by(ecosystem, transect, year, scenario, monsoon6SPEI) %>% summarise(n=n())
-# add to community-weighted mean body mass dataset
-cwdata_final <- left_join(cwdata_final,climate, by=c("ecosystem","transect","year","scenario"))
 # create inverse monsoon SPEI column
 cwdata_final$monsoon6SPEI_positivized<-cwdata_final$monsoon6SPEI*(-1)
 
 
 ## Relationship between CWM mass and SPEI in historic dataset #####
 
-# create data frame of historic data
-historic<-subset(cwdata_final,scenario == "historic")
-
 # Across ecosystems:
 
 # mixed-effects models: how does CWM body mass vary with monsoon aridity?
 # linear model
-m3<-lmer(cwm_mass~monsoon6SPEI_positivized*ecosystem+(1|year)+(1|transect),data=historic,na.action=na.omit)
+m3<-lmer(cwm_mass~monsoon6SPEI_positivized*ecosystem+(1|year)+(1|transect),data=cwdata_final,na.action=na.omit)
 # quadratic model
-m4<-lmer(cwm_mass~monsoon6SPEI_positivized*ecosystem+I(monsoon6SPEI_positivized^2)+(1|year)+(1|transect),data=historic,na.action=na.omit)
+m4<-lmer(cwm_mass~monsoon6SPEI_positivized*ecosystem+I(monsoon6SPEI_positivized^2)+(1|year)+(1|transect),data=cwdata_final,na.action=na.omit)
 
 # compare the two models based on AICc
 AICc(m3,m4) 
@@ -1221,484 +1312,4 @@ plot<-visreg(m3,"monsoon6SPEI_positivized",type="conditional",points.par=list(ce
        cex.axis=1.4, line.par=list(col="black"),
        xlab=list("Aridity index", cex=1.8),
        ylab=list("Community-weighted \nmean body mass (mg)", cex=1.8),xlim=c(-2,1.85)) 
-
-# Within each ecosystem:
-
-# Plains grassland: subset data, run mixed effects models, and obtain statistical results
-B<-subset(historic,ecosystem=="B") 
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=B,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=B,na.action=na.omit)
-AICc(m1,m2) # models have very similar AICc values --> choose linear model as superior for parsimony
-Anova(m1,type = 3)
-
-# Chihuahuan Desert shrubland: subset data, run mixed effects models, and obtain statistical results
-C<-subset(historic,ecosystem=="C") 
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=C,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=C,na.action=na.omit)
-AICc(m1,m2) # models have very similar AICc values --> choose linear model as superior for parsimony
-Anova(m1,type = 3)
-
-# Chihuahuan Desert grassland: subset data, run mixed effects models, and obtain statistical results
-G<-subset(historic,ecosystem=="G") 
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=G,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=G,na.action=na.omit)
-AICc(m1,m2) # models have very similar AICc values --> choose linear model as superior for parsimony
-Anova(m1,type = 3)
-
-
-## Relationship between CWM mass and SPEI in combined historic and predicted future datasets #####
-
-# FOR RCP 4.5
-
-# create data frame containing historic and RCP 4.5 data
-rcp4.5<-subset(cwdata_final,scenario == "historic" | scenario == "rcp4.5")
-
-# Plains grassland: subset data, run mixed effects models, and obtain statistical results
-B<-subset(rcp4.5,ecosystem=="B")
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=B,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=B,na.action=na.omit)
-AICc(m1,m2) # models have very similar AICc values --> choose linear model as superior for parsimony
-Anova(m1,type = 3)
-rsquared(m1)
-Anova(m2,type = 3)
-rsquared(m2)
-
-# plot the trend
-p<-ggplot(data=B, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="black") + scale_shape_manual(values=c(22,21)) + labs(shape="Data type")+ylim(0,40)+xlim(-2.5,3)+scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-#ggsave("cwmmass-aridity_B_2023-08-29.pdf", p, width=3, height=3, units="in")
-
-
-# Chihuahuan Desert grassland: subset data, run mixed effects models, and obtain statistical results
-G<-subset(rcp4.5,ecosystem=="G")
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=G,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=G,na.action=na.omit)
-AICc(m1,m2) # quadratic model superior
-Anova(m1,type = 3)
-rsquared(m1)
-Anova(m2,type = 3)
-rsquared(m2)
-
-# plot the trend
-p<-ggplot(data=G, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~poly(x,2),color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  labs(shape="Data type")+ylim(0,30)+xlim(-2.5,3) + scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save the plot. 
-#ggsave("cwmmass-aridity_G_2023-08-29.pdf", p, width=3, height=3, units="in")
-
-
-# Chihuahuan Desert shrubland: subset data, run mixed effects models, and obtain statistical results
-C<-subset(rcp4.5,ecosystem=="C")
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=C,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=C,na.action=na.omit)
-AICc(m1,m2) # quadratic model superior
-Anova(m1,type = 3)
-rsquared(m1)
-Anova(m2,type = 3)
-rsquared(m2)
-
-# plot the trend
-p<-ggplot(data=C, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~poly(x,2),color="black") + 
-  scale_shape_manual(values=c(22,21)) +  labs(shape="Data type")+ylim(0,30)+xlim(-2.5,3) + scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save the plot. 
-#ggsave("cwmmass-aridity_C_2023-08-29.pdf", p, width=3, height=3, units="in")
-
-
-
-# FOR RCP 2.6 and RCP 8.5
-
-# Plains grassland, RCP 2.6: subset data, run mixed effects models, and obtain statistical results
-rcp2.6<-subset(cwdata_final,scenario == "historic" | scenario == "rcp2.6")
-B<-subset(rcp2.6,ecosystem=="B")
-
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=B,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=B,na.action=na.omit)
-AICc(m1,m2)
-Anova(m1,type = 3)
-
-# plot the trend
-p<-ggplot(data=B, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="black") + scale_shape_manual(values=c(22,21)) + labs(shape="Data type")+
-  ylim(0,40)+xlim(-3,2.5)+
-  scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save plot
-#ggsave("cwmmass-aridity_B_rcp2.6_2023-08-29.pdf", p, width=4, height=3, units="in")
-
-
-# Chihuahuan Desert grassland, RCP 2.6: subset data, run mixed effects models, and obtain statistical results
-rcp2.6<-subset(cwdata_final,scenario == "historic" | scenario == "rcp2.6")
-G<-subset(rcp2.6,ecosystem=="G")
-
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=G,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=G,na.action=na.omit)
-AICc(m1,m2)
-Anova(m2,type = 3)
-
-# plot the trend
-p<-ggplot(data=G, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~poly(x,2),color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  labs(shape="Data type")+
-  ylim(0,40)+xlim(-3,2.5) +
-  scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save plot
-#ggsave("cwmmass-aridity_G_rcp2.6_2023-08-29.pdf", p, width=4, height=3, units="in")
-
-
-# Chihuahuan Desert shrubland, RCP 2.6: subset data, run mixed effects models, and obtain statistical results
-rcp2.6<-subset(cwdata_final,scenario == "historic" | scenario == "rcp2.6")
-C<-subset(rcp2.6,ecosystem=="C")
-
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=C,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=C,na.action=na.omit)
-AICc(m1,m2)
-Anova(m2,type = 3)
-
-# plot the trend
-p<-ggplot(data=C, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~poly(x,2),color="black") + 
-  scale_shape_manual(values=c(22,21)) +  labs(shape="Data type")+
-  ylim(0,40)+xlim(-3,2.5) +  
-  scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save plot
-#ggsave("cwmmass-aridity_C_rcp2.6_2023-08-29.pdf", p, width=4, height=3, units="in")
-
-
-# Plains grassland, RCP 8.5: subset data, run mixed effects models, and obtain statistical results
-rcp8.5<-subset(cwdata_final,scenario == "historic" | scenario == "rcp8.5")
-B<-subset(rcp8.5,ecosystem=="B")
-
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=B,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=B,na.action=na.omit)
-AICc(m1,m2)
-Anova(m1,type = 3)
-
-# plot the trend
-p<-ggplot(data=B, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="black") + scale_shape_manual(values=c(22,21)) + labs(shape="Data type")+
-  ylim(0,40)+xlim(-2.5,4) +
-  scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save results
-#ggsave("cwmmass-aridity_B_rcp8.5_2023-08-29.pdf", p, width=4, height=3, units="in")
-
-
-# Chihuahuan Desert grassland, RCP 8.5: subset data, run mixed effects models, and obtain statistical results
-rcp8.5<-subset(cwdata_final,scenario == "historic" | scenario == "rcp8.5")
-G<-subset(rcp8.5,ecosystem=="G")
-
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=G,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=G,na.action=na.omit)
-AICc(m1,m2)
-Anova(m1,type = 3)
-
-# plot the trend
-p<-ggplot(data=G, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~x,color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  labs(shape="Data type")+
-  ylim(0,40)+xlim(-2.5,4) +
-  scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save results
-#ggsave("cwmmass-aridity_G_rcp8.5_2023-08-29.pdf", p, width=4, height=3, units="in")
-
-
-# Chihuahuan Desert shrubland, RCP 8.5: subset data, run mixed effects models, and obtain statistical results
-rcp8.5<-subset(cwdata_final,scenario == "historic" | scenario == "rcp8.5")
-C<-subset(rcp8.5,ecosystem=="C")
-
-m1<-lmer(cwm_mass~monsoon6SPEI_positivized+(1|transect)+(1|year),data=C,na.action=na.omit)
-m2<-lmer(cwm_mass~monsoon6SPEI_positivized+I(monsoon6SPEI_positivized^2)+(1|transect)+(1|year),data=C,na.action=na.omit)
-AICc(m1,m2)
-Anova(m2,type = 3)
-
-# plot the trend
-p<-ggplot(data=C, aes(x=monsoon6SPEI*(-1),y=cwm_mass)) + geom_point(size=2,aes(shape=scenario,fill=scenario))+ xlab("Aridity index") + ylab("Community-weighted \nmean body mass (mg)") + theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + 
-  theme(legend.position = "none") +
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) + geom_smooth(method="lm",formula=y~poly(x,2),color="black") + 
-  scale_shape_manual(values=c(22,21)) +  labs(shape="Data type")+
-  ylim(0,40)+xlim(-2.5,4) + 
-  scale_fill_manual(values=c("gray22","darkgray"))
-p
-
-# save results
-#ggsave("cwmmass-aridity_C_rcp8.5_2023-08-29.pdf", p, width=4, height=3, units="in")
-
-
-## Relationship between CWM mass and year in combined historic and predicted future datasets #####
-
-# RCP 4.5
-
-# create data frame of historic data and RCP 4.5 data
-rcp4.5<-subset(cwdata_final,scenario == "historic" | scenario == "rcp4.5")
-
-# create separate data frames for each ecosystem, and relevel factor
-rcp4.5$scenario<-as.factor(rcp4.5$scenario)
-levels(rcp4.5$scenario)<-c("long-term historic","predicted future")
-B <- subset(rcp4.5,ecosystem=="B")
-C <- subset(rcp4.5,ecosystem=="C")
-G <- subset(rcp4.5,ecosystem=="G")
-
-# Plains grassland: plot relationship between CWM body mass and year
-p<-ggplot(data=B, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() + theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type") +
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_B_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Chihuahuan Desert shrubland: plot relationship between CWM body mass and year
-p<-ggplot(data=C, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() + theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type")+
-  ylim(0,30)
-p
-
-# save the plot. 
-#ggsave("cwmmass-time_C_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Chihuahuan Desert grassland: plot relationship between CWM body mass and year
-p<-ggplot(data=G, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() + theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) +
-  theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+
-  theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") +  
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type")+
-  ylim(0,30)
-
-p
-
-# save the plot. 
-#ggsave("cwmmass-time_G_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Statistical analyses corresponding with graphs above
-
-# Plains grassland: subset data, run mixed effects model, and obtain statistical results
-rcp4.5_B<-subset(cwdata_final, scenario=="rcp4.5" & ecosystem=="B")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp4.5_B,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) # increase in abundance
-rsquared(m1)
-AICc(m1)
-
-# Chihuahuan Desert grassland: subset data, run mixed effects model, and obtain statistical results
-rcp4.5_G<-subset(cwdata_final, scenario=="rcp4.5" & ecosystem=="G")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp4.5_G,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-AICc(m1)
-
-# Chihuahuan Desert shrubland: subset data, run mixed effects model, and obtain statistical results
-rcp4.5_C<-subset(cwdata_final, scenario=="rcp4.5" & ecosystem=="C")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp4.5_C,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-AICc(m1)
-
-
-# RCP 2.6
-
-# create data frame of historic and projected future data
-rcp2.6<-subset(cwdata_final,scenario == "historic" | scenario == "rcp2.6")
-
-# create separate data frames for each ecosystem, and relevel factor
-rcp2.6$scenario<-as.factor(rcp2.6$scenario)
-levels(rcp2.6$scenario)<-c("long-term historic","predicted future")
-B <- subset(rcp2.6,ecosystem=="B")
-C <- subset(rcp2.6,ecosystem=="C")
-G <- subset(rcp2.6,ecosystem=="G")
-
-# Plains grassland: plot relationship between CWM body mass and year
-p<-ggplot(data=B, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type") +
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_rcp2.6_B_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Chihuahuan Desert grassland: plot relationship between CWM body mass and year
-p<-ggplot(data=G, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") +  
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type")+
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_rcp2.6_G_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Chihuahuan Desert shrubland: plot relationship between CWM body mass and year
-p<-ggplot(data=C, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type")+
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_rcp2.6_C_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Statistical analyses corresponding with graphs above
-
-# Plains grassland: subset data, run mixed effects model, and obtain statistical results
-rcp2.6_B<-subset(cwdata_final, scenario=="rcp2.6" & ecosystem=="B")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp2.6_B,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-
-# Chihuahuan Desert grassland: subset data, run mixed effects model, and obtain statistical results
-rcp2.6_G<-subset(cwdata_final, scenario=="rcp2.6" & ecosystem=="G")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp2.6_G,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-
-# Chihuahuan Desert shrubland: subset data, run mixed effects model, and obtain statistical results
-rcp2.6_C<-subset(cwdata_final, scenario=="rcp2.6" & ecosystem=="C")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp2.6_C,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-
-
-# RCP 8.5
-
-# create data frame of historic and projected future data
-rcp8.5<-subset(cwdata_final,scenario == "historic" | scenario == "rcp8.5")
-
-# create separate data frames for each ecosystem, and relevel factor
-rcp8.5$scenario<-as.factor(rcp8.5$scenario)
-levels(rcp8.5$scenario)<-c("long-term historic","predicted future")
-B <- subset(rcp8.5,ecosystem=="B")
-C <- subset(rcp8.5,ecosystem=="C")
-G <- subset(rcp8.5,ecosystem=="G")
-
-# Plains grassland: plot relationship between CWM body mass and year
-p<-ggplot(data=B, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type") +
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_rcp8.5_B_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Chihuahuan Desert grassland: plot relationship between CWM body mass and year
-p<-ggplot(data=G, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") +  
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type")+
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_rcp8.5_G_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Chihuahuan Desert shrubland: plot relationship between CWM body mass and year
-p<-ggplot(data=C, aes(x=year,y=cwm_mass)) + 
-  geom_point(size=3,aes(fill=monsoon6SPEI*(-1),shape=scenario))+ 
-  xlab("Year") + ylab("Community-weighted \nmean body mass (mg)") + 
-  theme_classic() +theme(axis.text.x = element_text(size=12))+ theme(axis.text.y = element_text(size=12)) + theme(legend.text=element_text(size=14), legend.title=element_text(size=15))+ theme(axis.title.x = element_text(size=18))+ theme(axis.title.y = element_text(size=18)) +
-  stat_smooth(method = "lm", formula = y ~ x, color="black") + 
-  scale_shape_manual(values=c(22,21)) +
-  scale_fill_gradient2(high = "red3", low = "royalblue",mid = "white",midpoint = 0) + labs(fill="Aridity index", shape="Data type")+
-  ylim(0,40)
-p
-
-# save the plot. 
-# ggsave("cwmmass-time_rcp8.5_C_2023-08-29.pdf", p, width=6, height=3, units="in")
-
-
-# Statistical analyses corresponding with graphs above
-
-# Plains grassland: subset data, run mixed effects model, and obtain statistical results
-rcp8.5_B<-subset(cwdata_final, scenario=="rcp8.5" & ecosystem=="B")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp8.5_B,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-
-# Chihuahuan Desert grassland: subset data, run mixed effects model, and obtain statistical results
-rcp8.5_G<-subset(cwdata_final, scenario=="rcp8.5" & ecosystem=="G")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp8.5_G,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
-
-# Chihuahuan Desert shrubland: subset data, run mixed effects model, and obtain statistical results
-rcp8.5_C<-subset(cwdata_final, scenario=="rcp8.5" & ecosystem=="C")
-m1<-lmer(cwm_mass~year+(1|transect),data=rcp8.5_C,na.action=na.omit)
-Anova(m1,type = 3)
-summary(m1) 
-rsquared(m1)
 
